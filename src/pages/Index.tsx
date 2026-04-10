@@ -1,36 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
-const drivers = [
-  {
-    os: "Windows 11 / 10",
-    icon: "Monitor",
-    version: "v5.2.1",
-    size: "12.4 MB",
-    date: "Март 2025",
-  },
-  {
-    os: "Windows 7 / 8",
-    icon: "Monitor",
-    version: "v4.8.3",
-    size: "9.1 MB",
-    date: "Янв 2025",
-  },
-  {
-    os: "macOS 13+",
-    icon: "Apple",
-    version: "v3.6.0",
-    size: "14.2 MB",
-    date: "Февр 2025",
-  },
-  {
-    os: "Linux (Ubuntu/Debian)",
-    icon: "Terminal",
-    version: "v2.9.4",
-    size: "6.8 MB",
-    date: "Март 2025",
-  },
-];
+const GET_DRIVERS_URL = "https://functions.poehali.dev/eb823ac4-d4a5-4d69-9da3-dcc16b82b5d9";
+
+const OS_ICONS: Record<string, string> = {
+  "Windows 11 / 10": "Monitor",
+  "Windows 7 / 8": "Monitor",
+  "macOS 13+": "Apple",
+  "Linux (Ubuntu/Debian)": "Terminal",
+};
+
+interface Driver {
+  id: number;
+  os_name: string;
+  filename: string;
+  version: string;
+  size_mb: number;
+  cdn_url: string;
+  uploaded_at: string;
+}
 
 const steps = [
   {
@@ -85,6 +73,16 @@ const faqs = [
 
 export default function Index() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+
+  useEffect(() => {
+    fetch(GET_DRIVERS_URL)
+      .then((r) => r.json())
+      .then((data) => setDrivers(data.drivers || []))
+      .catch(() => setDrivers([]))
+      .finally(() => setLoadingDrivers(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-golos text-[#111]">
@@ -144,7 +142,6 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Divider stat line */}
           <div className="mt-20 pt-8 border-t border-[#e8e8e8] grid grid-cols-3 gap-8">
             {[
               { val: "300", unit: "Мбит/с", label: "Скорость" },
@@ -170,29 +167,49 @@ export default function Index() {
             <p className="text-xs tracking-[0.2em] uppercase text-[#999] mb-2">Раздел 01</p>
             <h2 className="text-3xl font-light text-[#111]">Драйверы</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#e8e8e8]">
-            {drivers.map((d) => (
-              <div
-                key={d.os}
-                className="bg-white p-8 flex items-start justify-between gap-4 group hover:bg-[#fafafa] transition-colors"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 w-10 h-10 border border-[#e8e8e8] flex items-center justify-center shrink-0">
-                    <Icon name={d.icon} size={18} />
+
+          {loadingDrivers ? (
+            <div className="flex items-center gap-3 text-sm text-[#aaa] py-8">
+              <Icon name="Loader" size={16} />
+              Загружаем список...
+            </div>
+          ) : drivers.length === 0 ? (
+            <div className="border border-dashed border-[#e8e8e8] p-12 text-center">
+              <p className="text-sm text-[#aaa]">Драйверы пока не загружены</p>
+              <a href="/admin" className="text-xs text-[#999] hover:text-[#111] transition-colors mt-2 inline-block underline underline-offset-4">
+                Перейти в админ-панель
+              </a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#e8e8e8]">
+              {drivers.map((d) => (
+                <div
+                  key={d.id}
+                  className="bg-white p-8 flex items-start justify-between gap-4 group hover:bg-[#fafafa] transition-colors"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 w-10 h-10 border border-[#e8e8e8] flex items-center justify-center shrink-0">
+                      <Icon name={OS_ICONS[d.os_name] || "HardDrive"} size={18} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#111] text-sm mb-1">{d.os_name}</p>
+                      <p className="text-xs text-[#aaa]">
+                        {d.version} · {d.size_mb} МБ · {d.uploaded_at}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-[#111] text-sm mb-1">{d.os}</p>
-                    <p className="text-xs text-[#aaa]">
-                      {d.version} · {d.size} · {d.date}
-                    </p>
-                  </div>
+                  <a
+                    href={d.cdn_url}
+                    download={d.filename}
+                    className="shrink-0 w-9 h-9 border border-[#e8e8e8] flex items-center justify-center hover:bg-[#111] hover:text-white hover:border-[#111] transition-all group-hover:border-[#ccc]"
+                  >
+                    <Icon name="Download" size={15} />
+                  </a>
                 </div>
-                <button className="shrink-0 w-9 h-9 border border-[#e8e8e8] flex items-center justify-center hover:bg-[#111] hover:text-white hover:border-[#111] transition-all group-hover:border-[#ccc]">
-                  <Icon name="Download" size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
           <p className="mt-4 text-xs text-[#aaa]">
             Возникли проблемы? Напишите нам — поможем подобрать правильную версию.
           </p>
@@ -209,7 +226,7 @@ export default function Index() {
           <div className="relative">
             <div className="absolute left-[2.25rem] top-0 bottom-0 w-px bg-[#e8e8e8] hidden md:block" />
             <div className="flex flex-col gap-0">
-              {steps.map((step, i) => (
+              {steps.map((step) => (
                 <div key={step.number} className="flex gap-8 items-start relative pb-10 last:pb-0">
                   <div className="shrink-0 w-[4.5rem] flex flex-col items-center">
                     <div className="w-11 h-11 border border-[#e8e8e8] bg-white flex items-center justify-center z-10 relative">
